@@ -65,6 +65,20 @@ if (process.platform === "linux") {
     app.commandLine.appendSwitch("enable-video-decode");
 }
 
+// Support disabling hardware acceleration for VMs / Basic Display Adapter
+try {
+    let shouldDisableGPU = process.argv.includes("--disable-gpu") || process.env.EDEX_DISABLE_GPU === "1";
+    if (!shouldDisableGPU && fs.existsSync(settingsFile)) {
+        let loadedSettings = JSON.parse(fs.readFileSync(settingsFile, "utf-8"));
+        if (loadedSettings.disableGPU === true) {
+            shouldDisableGPU = true;
+        }
+    }
+    if (shouldDisableGPU) {
+        app.disableHardwareAcceleration();
+    }
+} catch(e) {}
+
 // Fix userData folder not setup on Windows
 try {
     fs.mkdirSync(electron.app.getPath("userData"));
@@ -94,6 +108,7 @@ if (!fs.existsSync(settingsFile)) {
         excludeThreadsFromToplist: true,
         hideDotfiles: false,
         fsListView: false,
+        disableGPU: false,
         experimentalGlobeFeatures: false,
         experimentalFeatures: false
     }, "", 4));

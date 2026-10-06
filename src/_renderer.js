@@ -784,6 +784,14 @@ window.openSettings = async () => {
                         </select></td>
                     </tr>
                     <tr>
+                        <td>disableGPU</td>
+                        <td>Disable hardware acceleration (recommended for VMs/basic display adapters)</td>
+                        <td><select id="settingsEditor-disableGPU">
+                            <option>${window.settings.disableGPU}</option>
+                            <option>${!window.settings.disableGPU}</option>
+                        </select></td>
+                    </tr>
+                    <tr>
                         <td>experimentalGlobeFeatures</td>
                         <td>Toggle experimental features for the network globe</td>
                         <td><select id="settingsEditor-experimentalGlobeFeatures">
@@ -849,6 +857,7 @@ window.writeSettingsFile = () => {
         excludeThreadsFromToplist: (document.getElementById("settingsEditor-excludeThreadsFromToplist").value === "true"),
         hideDotfiles: (document.getElementById("settingsEditor-hideDotfiles").value === "true"),
         fsListView: (document.getElementById("settingsEditor-fsListView").value === "true"),
+        disableGPU: (document.getElementById("settingsEditor-disableGPU").value === "true"),
         experimentalGlobeFeatures: (document.getElementById("settingsEditor-experimentalGlobeFeatures").value === "true"),
         experimentalFeatures: (document.getElementById("settingsEditor-experimentalFeatures").value === "true")
     };
