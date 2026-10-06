@@ -88,7 +88,7 @@ if (!fs.existsSync(settingsFile)) {
         nointro: false,
         nocursor: false,
         forceFullscreen: true,
-        allowWindowed: false,
+        allowWindowed: true,
         excludeThreadsFromToplist: true,
         hideDotfiles: false,
         fsListView: false,
@@ -202,6 +202,15 @@ function createWindow(settings) {
             experimentalFeatures: settings.experimentalFeatures || false
         }
     });
+
+    try {
+        const remoteMain = require('@electron/remote/main');
+        if (typeof remoteMain.enable === "function") {
+            remoteMain.enable(win.webContents);
+        }
+    } catch(e) {
+        signale.warn("Failed to enable remote on webContents:", e);
+    }
 
     win.loadURL(url.format({
         pathname: path.join(__dirname, 'ui.html'),

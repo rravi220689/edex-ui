@@ -138,7 +138,11 @@ class Terminal {
             let fitAddon = new FitAddon();
             this.term.loadAddon(fitAddon);
             this.term.open(document.getElementById(opts.parentId));
-            this.term.loadAddon(new WebglAddon());
+            try {
+                this.term.loadAddon(new WebglAddon());
+            } catch(e) {
+                console.warn("WebGL addon failed to load, falling back to standard canvas renderer:", e);
+            }
             let ligaturesAddon = new LigaturesAddon();
             this.term.loadAddon(ligaturesAddon);
             this.term.attachCustomKeyEventHandler(e => {
@@ -293,7 +297,10 @@ class Terminal {
                     this.clipboard.didCopy = true;
                 },
                 paste: () => {
-                    this.write(remote.clipboard.readText());
+                    const clipboard = require("electron").clipboard || (typeof remote !== "undefined" ? remote.clipboard : null);
+                    if (clipboard) {
+                        this.write(clipboard.readText());
+                    }
                     this.clipboard.didCopy = false;
                 },
                 didCopy: false
@@ -425,9 +432,12 @@ class Terminal {
                 verifyClient: info => {
                     if (this.wss.clients.length >= 1) {
                         return false;
-                    } else {
-                        return true;
                     }
+                    const origin = info.origin || (info.req && info.req.headers && info.req.headers.origin);
+                    if (origin && origin !== "null" && !origin.startsWith("file://") && !origin.startsWith("vscode-file://")) {
+                        return false;
+                    }
+                    return true;
                 }
             });
             this.Ipc.on("terminal_channel-"+this.port, (e, ...args) => {

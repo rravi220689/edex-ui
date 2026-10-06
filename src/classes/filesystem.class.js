@@ -508,11 +508,13 @@ class FilesystemDisplay {
                 this.space_bar.text.innerHTML = "Could not calculate mountpoint usage.";
                 this.space_bar.bar.value = 100;
             }).then(d => {
-                d.forEach(fsBlock => {
-                    if (path.startsWith(fsBlock.mount)) {
-                        this.fsBlock = fsBlock;
-                    }
-                });
+                if (d && Array.isArray(d)) {
+                    d.forEach(fsBlock => {
+                        if (fsBlock && fsBlock.mount && path.toLowerCase().startsWith(fsBlock.mount.toLowerCase())) {
+                            this.fsBlock = fsBlock;
+                        }
+                    });
+                }
                 this.renderDiskUsage(this.fsBlock);
             });
         };

@@ -50,10 +50,17 @@ class Netstat {
         geolite2.downloadDbs(require("path").join(require("@electron/remote").app.getPath("userData"), "geoIPcache")).then(() => {
            geolite2.open('GeoLite2-City', path => {
                 return maxmind.open(path);
-            }).catch(e => {throw e}).then(lookup => {
-                this.geoLookup = lookup;
-                this.lastconn.finished = true;
+            }).catch(e => {
+                console.warn("Could not open GeoIP database:", e);
+                return null;
+            }).then(lookup => {
+                if (lookup) {
+                    this.geoLookup = lookup;
+                    this.lastconn.finished = true;
+                }
             });
+        }).catch(err => {
+            console.warn("Could not download GeoIP databases:", err);
         });
     }
     updateInfo() {
