@@ -59,9 +59,11 @@ if (process.env.http_proxy) delete process.env.http_proxy;
 if (process.env.https_proxy) delete process.env.https_proxy;
 
 // Bypass GPU acceleration blocklist, trading a bit of stability for a great deal of performance, mostly on Linux
-app.commandLine.appendSwitch("ignore-gpu-blocklist");
-app.commandLine.appendSwitch("enable-gpu-rasterization");
-app.commandLine.appendSwitch("enable-video-decode");
+if (process.platform === "linux") {
+    app.commandLine.appendSwitch("ignore-gpu-blocklist");
+    app.commandLine.appendSwitch("enable-gpu-rasterization");
+    app.commandLine.appendSwitch("enable-video-decode");
+}
 
 // Fix userData folder not setup on Windows
 try {
