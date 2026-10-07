@@ -96,6 +96,8 @@ stepLog("3 - before loading json configs");
 window.settings = require(settingsFile);
 window.shortcuts = require(shortcutsFile);
 window.lastWindowState = require(lastWindowStateFile);
+var settings = window.settings;
+var shortcuts = window.shortcuts;
 
 stepLog("4 - configs loaded successfully");
 
@@ -291,7 +293,7 @@ if (window.settings.nointro || window.settings.nointroOverride) {
     initSystemInformationProxy();
     document.getElementById("boot_screen").remove();
     document.body.setAttribute("class", "");
-    waitForFonts().then(initUI);
+    waitForFonts().then(initUI).catch(e => stepLog("initUI CATCH: " + (e && e.stack || e)));
 } else {
     stepLog("12B - calling displayLine");
     displayLine();
@@ -424,7 +426,8 @@ async function getDisplayName() {
 // Create the UI's html structure and initialize the terminal client and the keyboard
 async function initUI() {
     stepLog("14 - initUI started");
-    document.body.innerHTML += `<section class="mod_column" id="mod_column_left">
+    try {
+        document.body.innerHTML += `<section class="mod_column" id="mod_column_left">
         <h3 class="title"><p>PANEL</p><p>SYSTEM</p></h3>
     </section>
     <section id="main_shell" style="height:0%;width:0%;opacity:0;margin-bottom:30vh;" augmented-ui="bl-clip tr-clip exe">
@@ -453,10 +456,12 @@ async function initUI() {
     </section>
     <section id="keyboard" style="opacity:0;">
     </section>`;
+    stepLog("14A - initializing keyboard");
     window.keyboard = new Keyboard({
-        layout: path.join(keyboardsDir, settings.keyboard+".json"),
+        layout: path.join(keyboardsDir, (window.settings.keyboard || "en-US")+".json"),
         container: "keyboard"
     });
+    stepLog("14B - keyboard initialized");
 
     await _delay(10);
 
@@ -612,6 +617,10 @@ async function initUI() {
     await _delay(200);
 
     window.updateCheck = new UpdateChecker();
+    stepLog("14Z - initUI completed successfully!");
+    } catch(err) {
+        stepLog("FATAL ERROR inside initUI: " + (err && err.stack || err));
+    }
 }
 
 window.themeChanger = theme => {
