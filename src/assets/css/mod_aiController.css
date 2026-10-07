@@ -1,0 +1,309 @@
+/* eDEX-UI Local AI Controller CSS */
+
+div#main_shell_innercontainer div#ai_container {
+    height: 100%;
+    width: 100%;
+    margin: 0;
+    overflow: hidden;
+    z-index: -999;
+    opacity: 0;
+    position: relative;
+    top: -300%;
+    display: flex;
+    flex-direction: column;
+    pointer-events: none;
+    box-sizing: border-box;
+    background: rgba(0, 0, 0, 0.45);
+    font-family: var(--font_main);
+}
+
+div#main_shell_innercontainer div#ai_container.active {
+    z-index: 5;
+    opacity: 1;
+    pointer-events: auto;
+}
+
+#ai_hud_header {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.6vh 0.8vw;
+    background: var(--color_light_black);
+    border-bottom: 0.18vh solid rgba(var(--color_r), var(--color_g), var(--color_b), 0.6);
+    flex-shrink: 0;
+}
+
+#ai_hud_title {
+    font-size: 1.5vh;
+    font-weight: bold;
+    color: rgb(var(--color_r), var(--color_g), var(--color_b));
+    letter-spacing: 0.1vw;
+    display: flex;
+    align-items: center;
+    gap: 0.5vw;
+}
+
+#ai_hud_badges {
+    display: flex;
+    flex-direction: row;
+    gap: 0.6vw;
+    font-size: 1.1vh;
+}
+
+.ai_badge {
+    padding: 0.2vh 0.4vw;
+    background: rgba(var(--color_r), var(--color_g), var(--color_b), 0.15);
+    border: 0.1vh solid rgba(var(--color_r), var(--color_g), var(--color_b), 0.5);
+    color: rgb(var(--color_r), var(--color_g), var(--color_b));
+    text-transform: uppercase;
+    font-weight: bold;
+}
+
+.ai_badge.online {
+    background: rgba(0, 255, 128, 0.2);
+    border-color: #00ff80;
+    color: #00ff80;
+}
+
+#ai_chips_bar {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 0.4vw;
+    padding: 0.4vh 0.8vw;
+    background: rgba(0, 0, 0, 0.6);
+    border-bottom: 0.1vh solid rgba(var(--color_r), var(--color_g), var(--color_b), 0.25);
+    overflow-x: auto;
+    flex-shrink: 0;
+}
+
+.ai_chip {
+    background: rgba(var(--color_r), var(--color_g), var(--color_b), 0.1);
+    border: 0.1vh solid rgba(var(--color_r), var(--color_g), var(--color_b), 0.4);
+    color: rgb(var(--color_r), var(--color_g), var(--color_b));
+    font-size: 1.15vh;
+    padding: 0.25vh 0.5vw;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all 0.15s ease;
+    outline: none;
+    font-family: var(--font_main);
+}
+
+.ai_chip:hover {
+    background: rgba(var(--color_r), var(--color_g), var(--color_b), 0.35);
+    border-color: rgb(var(--color_r), var(--color_g), var(--color_b));
+    color: #ffffff;
+    box-shadow: 0 0 0.5vh rgba(var(--color_r), var(--color_g), var(--color_b), 0.5);
+}
+
+#ai_message_feed {
+    flex: 1;
+    overflow-y: auto;
+    padding: 1vh 1vw;
+    display: flex;
+    flex-direction: column;
+    gap: 1vh;
+    box-sizing: border-box;
+    scroll-behavior: smooth;
+}
+
+/* Scrollbar */
+#ai_message_feed::-webkit-scrollbar {
+    width: 0.4vw;
+}
+#ai_message_feed::-webkit-scrollbar-thumb {
+    background: rgba(var(--color_r), var(--color_g), var(--color_b), 0.4);
+}
+#ai_message_feed::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.3);
+}
+
+.ai_msg {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4vh;
+    max-width: 95%;
+    box-sizing: border-box;
+    animation: aiMsgFadeIn 0.2s ease-out;
+}
+
+@keyframes aiMsgFadeIn {
+    from { opacity: 0; transform: translateY(0.5vh); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.ai_msg.user {
+    align-self: flex-end;
+    align-items: flex-end;
+}
+
+.ai_msg.user .ai_msg_body {
+    background: rgba(var(--color_r), var(--color_g), var(--color_b), 0.15);
+    border: 0.12vh solid rgba(var(--color_r), var(--color_g), var(--color_b), 0.6);
+    color: #ffffff;
+    padding: 0.6vh 0.8vw;
+    font-size: 1.35vh;
+}
+
+.ai_msg.ai {
+    align-self: flex-start;
+    align-items: flex-start;
+}
+
+.ai_msg.ai .ai_msg_body {
+    background: rgba(10, 15, 20, 0.85);
+    border: 0.12vh solid rgba(var(--color_r), var(--color_g), var(--color_b), 0.4);
+    border-left: 0.35vh solid rgb(var(--color_r), var(--color_g), var(--color_b));
+    color: #d0d8e0;
+    padding: 0.8vh 1vw;
+    font-size: 1.3vh;
+    line-height: 1.4;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.ai_msg_sender {
+    font-size: 1.05vh;
+    font-weight: bold;
+    color: rgba(var(--color_r), var(--color_g), var(--color_b), 0.8);
+    letter-spacing: 0.05vw;
+}
+
+.ai_card {
+    background: rgba(0, 0, 0, 0.4);
+    border: 0.1vh solid rgba(var(--color_r), var(--color_g), var(--color_b), 0.3);
+    padding: 0.6vh 0.8vw;
+    margin-top: 0.5vh;
+    margin-bottom: 0.5vh;
+    display: flex;
+    flex-direction: column;
+    gap: 0.4vh;
+}
+
+.ai_card_title {
+    font-weight: bold;
+    color: rgb(var(--color_r), var(--color_g), var(--color_b));
+    font-size: 1.25vh;
+    border-bottom: 0.08vh solid rgba(var(--color_r), var(--color_g), var(--color_b), 0.2);
+    padding-bottom: 0.2vh;
+}
+
+.ai_table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 1.15vh;
+    margin-top: 0.4vh;
+}
+
+.ai_table th {
+    text-align: left;
+    color: rgb(var(--color_r), var(--color_g), var(--color_b));
+    padding: 0.3vh 0.4vw;
+    border-bottom: 0.1vh solid rgba(var(--color_r), var(--color_g), var(--color_b), 0.4);
+}
+
+.ai_table td {
+    padding: 0.3vh 0.4vw;
+    border-bottom: 0.08vh solid rgba(255, 255, 255, 0.06);
+    color: #c8d0d8;
+}
+
+.ai_btn {
+    background: rgba(var(--color_r), var(--color_g), var(--color_b), 0.15);
+    border: 0.1vh solid rgba(var(--color_r), var(--color_g), var(--color_b), 0.5);
+    color: rgb(var(--color_r), var(--color_g), var(--color_b));
+    padding: 0.2vh 0.4vw;
+    font-size: 1.05vh;
+    font-weight: bold;
+    cursor: pointer;
+    outline: none;
+    transition: all 0.15s ease;
+    font-family: var(--font_main);
+}
+
+.ai_btn:hover {
+    background: rgb(var(--color_r), var(--color_g), var(--color_b));
+    color: var(--color_light_black);
+}
+
+.ai_btn.danger {
+    border-color: #ff3344;
+    color: #ff3344;
+    background: rgba(255, 51, 68, 0.15);
+}
+
+.ai_btn.danger:hover {
+    background: #ff3344;
+    color: #ffffff;
+}
+
+.ai_code_block {
+    background: rgba(0, 0, 0, 0.85);
+    border: 0.1vh solid rgba(var(--color_r), var(--color_g), var(--color_b), 0.3);
+    padding: 0.6vh 0.8vw;
+    font-family: monospace;
+    font-size: 1.2vh;
+    color: #a8f0b0;
+    overflow-x: auto;
+    white-space: pre-wrap;
+    max-height: 25vh;
+    margin: 0.4vh 0;
+}
+
+#ai_input_toolbar {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 0.5vw;
+    padding: 0.6vh 0.8vw;
+    background: var(--color_light_black);
+    border-top: 0.18vh solid rgba(var(--color_r), var(--color_g), var(--color_b), 0.5);
+    flex-shrink: 0;
+}
+
+#ai_input_prefix {
+    font-size: 1.3vh;
+    font-weight: bold;
+    color: rgb(var(--color_r), var(--color_g), var(--color_b));
+    letter-spacing: 0.05vw;
+    white-space: nowrap;
+}
+
+#ai_input {
+    flex: 1;
+    background: rgba(0, 0, 0, 0.7);
+    border: 0.12vh solid rgba(var(--color_r), var(--color_g), var(--color_b), 0.6);
+    color: #ffffff;
+    font-family: var(--font_main);
+    font-size: 1.35vh;
+    padding: 0.5vh 0.8vw;
+    outline: none;
+    box-sizing: border-box;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+#ai_input:focus {
+    border-color: rgb(var(--color_r), var(--color_g), var(--color_b));
+    box-shadow: 0 0 0.8vh rgba(var(--color_r), var(--color_g), var(--color_b), 0.6);
+}
+
+#ai_btn_send {
+    background: rgba(var(--color_r), var(--color_g), var(--color_b), 0.2);
+    border: 0.12vh solid rgba(var(--color_r), var(--color_g), var(--color_b), 0.7);
+    color: rgb(var(--color_r), var(--color_g), var(--color_b));
+    font-family: var(--font_main);
+    font-size: 1.3vh;
+    font-weight: bold;
+    padding: 0.5vh 1vw;
+    cursor: pointer;
+    outline: none;
+    transition: all 0.15s ease;
+}
+
+#ai_btn_send:hover {
+    background: rgb(var(--color_r), var(--color_g), var(--color_b));
+    color: var(--color_light_black);
+    box-shadow: 0 0 0.6vh rgba(var(--color_r), var(--color_g), var(--color_b), 0.8);
+}

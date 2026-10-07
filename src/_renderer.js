@@ -489,14 +489,14 @@ async function initUI() {
             <li id="shell_tab0" onclick="window.focusShellTab(0);" class="active"><p>MAIN SHELL</p></li>
             <li id="shell_tab1" onclick="window.focusShellTab(1);"><p>EMPTY</p></li>
             <li id="shell_tab2" onclick="window.focusShellTab(2);"><p>EMPTY</p></li>
-            <li id="shell_tab3" onclick="window.focusShellTab(3);"><p>EMPTY</p></li>
+            <li id="shell_tab3" onclick="window.focusAITab();"><p>🤖 AI CORE</p></li>
             <li id="shell_tab4" onclick="window.focusBrowserTab();"><p>🌐 BROWSER</p></li>
         </ul>
         <div id="main_shell_innercontainer">
             <pre id="terminal0" class="active"></pre>
             <pre id="terminal1"></pre>
             <pre id="terminal2"></pre>
-            <pre id="terminal3"></pre>
+            <div id="ai_container"></div>
             <div id="browser_container">
                 <div id="browser_toolbar">
                     <button id="browser_btn_back" title="Back">◀</button>
@@ -521,18 +521,20 @@ async function initUI() {
     };
     window.currentTerm = 0;
     window.isBrowserActive = false;
+    window.isAIActive = false;
     window.term[0].onprocesschange = p => {
         document.getElementById("shell_tab0").innerHTML = `<p>MAIN - ${p}</p>`;
     };
     // Prevent losing hardware keyboard focus on the terminal when using touch keyboard
     window.onmouseup = e => {
-        if (!window.isBrowserActive && window.keyboard && window.keyboard.linkedToTerm && window.term && window.term[window.currentTerm]) {
+        if (!window.isBrowserActive && !window.isAIActive && window.keyboard && window.keyboard.linkedToTerm && window.term && window.term[window.currentTerm]) {
             window.term[window.currentTerm].term.focus();
         }
     };
     window.term[0].term.writeln("\033[1m"+`Welcome to eDEX-UI v${remote.app.getVersion()} - Electron v${process.versions.electron}`+"\033[0m");
 
     window.initBrowserTab();
+    window.aiController = new AIController("ai_container");
 
     await _delay(100);
 
@@ -700,6 +702,11 @@ window.focusBrowserTab = () => {
         e.setAttribute("class", "");
     });
 
+    // Deactivate AI container
+    const aiContainer = document.getElementById("ai_container");
+    if (aiContainer) aiContainer.setAttribute("class", "");
+    window.isAIActive = false;
+
     // Activate browser container
     const bContainer = document.getElementById("browser_container");
     if (bContainer) {
@@ -713,23 +720,69 @@ window.focusBrowserTab = () => {
     window.isBrowserActive = true;
 };
 
+window.focusAITab = () => {
+    window.audioManager.folder.play();
+
+    // Deactivate all tab headers except tab 3
+    document.querySelectorAll("ul#main_shell_tabs > li").forEach(e => {
+        e.setAttribute("class", "");
+    });
+    const tab3 = document.getElementById("shell_tab3");
+    if (tab3) tab3.setAttribute("class", "active");
+
+    // Deactivate all terminal pre containers
+    document.querySelectorAll("div#main_shell_innercontainer > pre").forEach(e => {
+        e.setAttribute("class", "");
+    });
+
+    // Deactivate browser container
+    const bContainer = document.getElementById("browser_container");
+    if (bContainer) bContainer.setAttribute("class", "");
+    window.isBrowserActive = false;
+
+    // Activate AI container
+    const aiContainer = document.getElementById("ai_container");
+    if (aiContainer) {
+        aiContainer.setAttribute("class", "active");
+    }
+
+    if (window.keyboard) {
+        window.keyboard.detach();
+    }
+
+    window.isAIActive = true;
+
+    // Focus AI input
+    const aiInput = document.getElementById("ai_input");
+    if (aiInput) {
+        setTimeout(() => aiInput.focus(), 50);
+    }
+};
+
 window.focusShellTab = number => {
+    if (number === 3) {
+        return window.focusAITab();
+    }
     if (number === 4) {
         return window.focusBrowserTab();
     }
 
     window.audioManager.folder.play();
 
+    // Deactivate AI container if active
+    const aiContainer = document.getElementById("ai_container");
+    if (aiContainer) aiContainer.setAttribute("class", "");
+    const tab3 = document.getElementById("shell_tab3");
+    if (tab3) tab3.setAttribute("class", "");
+    window.isAIActive = false;
+
     // Deactivate browser container if active
     const bContainer = document.getElementById("browser_container");
-    if (bContainer) {
-        bContainer.setAttribute("class", "");
-    }
+    if (bContainer) bContainer.setAttribute("class", "");
     const tab4 = document.getElementById("shell_tab4");
-    if (tab4) {
-        tab4.setAttribute("class", "");
-    }
+    if (tab4) tab4.setAttribute("class", "");
     window.isBrowserActive = false;
+
     if (window.keyboard) {
         window.keyboard.attach();
     }
@@ -752,7 +805,7 @@ window.focusShellTab = number => {
         window.term[number].resendCWD();
 
         window.fsDisp.followTab();
-    } else if (number > 0 && number < 4 && window.term[number] !== null && typeof window.term[number] !== "object") {
+    } else if (number > 0 && number < 3 && window.term[number] !== null && typeof window.term[number] !== "object") {
         window.term[number] = null;
 
         document.getElementById("shell_tab"+number).innerHTML = "<p>LOADING...</p>";
@@ -1195,21 +1248,25 @@ window.useAppShortcut = action => {
         case "NEXT_TAB":
             if (window.isBrowserActive) {
                 window.focusShellTab(0);
+            } else if (window.isAIActive) {
+                window.focusBrowserTab();
             } else {
                 let next = window.currentTerm + 1;
-                while (next < 4 && !window.term[next]) {
+                while (next < 3 && !window.term[next]) {
                     next++;
                 }
-                if (next < 4 && window.term[next]) {
+                if (next < 3 && window.term[next]) {
                     window.focusShellTab(next);
                 } else {
-                    window.focusBrowserTab();
+                    window.focusAITab();
                 }
             }
             return true;
         case "PREVIOUS_TAB":
             if (window.isBrowserActive) {
-                let prev = 3;
+                window.focusAITab();
+            } else if (window.isAIActive) {
+                let prev = 2;
                 while (prev >= 0 && !window.term[prev]) {
                     prev--;
                 }
@@ -1234,9 +1291,15 @@ window.useAppShortcut = action => {
             window.focusShellTab(2);
             return true;
         case "TAB_4":
-            window.focusShellTab(3);
+            window.focusAITab();
             return true;
         case "TAB_5":
+            window.focusBrowserTab();
+            return true;
+        case "AI_TAB":
+            window.focusAITab();
+            return true;
+        case "BROWSER_TAB":
             window.focusBrowserTab();
             return true;
         case "SETTINGS":
@@ -1274,6 +1337,15 @@ const globalShortcut = remote.globalShortcut;
 globalShortcut.unregisterAll();
 
 window.registerKeyboardShortcuts = () => {
+    try {
+        globalShortcut.register("CommandOrControl+Shift+A", () => {
+            window.focusAITab();
+        });
+        globalShortcut.register("CommandOrControl+Shift+B", () => {
+            window.focusBrowserTab();
+        });
+    } catch(e) {}
+
     window.shortcuts.forEach(cut => {
         if (!cut.enabled) return;
 
