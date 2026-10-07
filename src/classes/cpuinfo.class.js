@@ -126,10 +126,15 @@ class Cpuinfo {
         window.si.currentLoad().then(data => {
             let average = [[], []];
 
-            if (!data.cpus) return; // Prevent memleak in rare case where systeminformation takes extra time to retrieve CPU info (see github issue #216)
+            if (!data || !data.cpus) {
+                this.updatingCPUload = false;
+                return;
+            }
 
             data.cpus.forEach((e, i) => {
-                this.series[i].append(new Date().getTime(), e.load);
+                if (this.series[i]) {
+                    this.series[i].append(new Date().getTime(), e.load);
+                }
 
                 if (i < this.divide) {
                     average[0].push(e.load);
@@ -138,36 +143,48 @@ class Cpuinfo {
                 }
             });
             average.forEach((stats, i) => {
-                average[i] = Math.round(stats.reduce((a, b) => a + b, 0)/stats.length);
+                average[i] = stats.length > 0 ? Math.round(stats.reduce((a, b) => a + b, 0)/stats.length) : 0;
 
                 try {
-                    document.getElementById(`mod_cpuinfo_usagecounter${i}`).innerText = `Avg. ${average[i]}%`;
+                    const el = document.getElementById(`mod_cpuinfo_usagecounter${i}`);
+                    if (el) el.innerText = `Avg. ${average[i]}%`;
                 } catch(e) {
                     // Fail silently, DOM element is probably getting refreshed (new theme, etc)
                 }
             });
+            this.updatingCPUload = false;
+        }).catch(() => {
             this.updatingCPUload = false;
         });
     }
     updateCPUtemp() {
         window.si.cpuTemperature().then(data => {
             try {
-                document.getElementById("mod_cpuinfo_temp").innerText = `${data.max}°C`;
+                if (data && data.max != null) {
+                    const el = document.getElementById("mod_cpuinfo_temp");
+                    if (el) el.innerText = `${data.max}°C`;
+                }
             } catch(e) {
                 // See above notice
             }
-        });
+        }).catch(() => {});
     }
     updateCPUspeed() {
         if (this.updatingCPUspeed) return;
-        this.updatingCPUspeed = true
+        this.updatingCPUspeed = true;
         window.si.cpu().then(data => {
             try {
-                document.getElementById("mod_cpuinfo_speed_min").innerText = `${data.speed}GHz`;
-                document.getElementById("mod_cpuinfo_speed_max").innerText = `${data.speedMax}GHz`;
+                if (data) {
+                    const minEl = document.getElementById("mod_cpuinfo_speed_min");
+                    const maxEl = document.getElementById("mod_cpuinfo_speed_max");
+                    if (minEl && data.speed != null) minEl.innerText = `${data.speed}GHz`;
+                    if (maxEl && data.speedMax != null) maxEl.innerText = `${data.speedMax}GHz`;
+                }
             } catch(e) {
                 // See above notice
             }
+            this.updatingCPUspeed = false;
+        }).catch(() => {
             this.updatingCPUspeed = false;
         });
     }
@@ -176,10 +193,15 @@ class Cpuinfo {
         this.updatingCPUtasks = true;
         window.si.processes().then(data => {
             try {
-                document.getElementById("mod_cpuinfo_tasks").innerText = `${data.all}`;
+                if (data && data.all != null) {
+                    const el = document.getElementById("mod_cpuinfo_tasks");
+                    if (el) el.innerText = `${data.all}`;
+                }
             } catch(e) {
                 // See above notice
             }
+            this.updatingCPUtasks = false;
+        }).catch(() => {
             this.updatingCPUtasks = false;
         });
     }

@@ -100,8 +100,12 @@ class LocationGlobe {
             };
             this.removeConn = ip => {
                 let index = this.conns.findIndex(x => x.ip === ip);
-                this.conns[index].pin.remove();
-                this.conns.splice(index, 1);
+                if (index !== -1 && this.conns[index]) {
+                    if (this.conns[index].pin && typeof this.conns[index].pin.remove === "function") {
+                        this.conns[index].pin.remove();
+                    }
+                    this.conns.splice(index, 1);
+                }
             };
 
             // Add random satellites
@@ -140,9 +144,13 @@ class LocationGlobe {
         this.globe.addMarker(randomLat - 20, randomLong + 150, '', true);
     }
     addTemporaryConnectedMarker(ip) {
-        let data = window.mods.netstat.geoLookup.get(ip);
-        let geo = (data !== null ? data.location : {});
-        if (geo.latitude && geo.longitude) {
+        if (!window.mods.netstat || !window.mods.netstat.geoLookup || typeof window.mods.netstat.geoLookup.get !== "function") return;
+        let data = null;
+        try {
+            data = window.mods.netstat.geoLookup.get(ip);
+        } catch(e) {}
+        let geo = (data !== null && data !== undefined ? (data.location || {}) : {});
+        if (geo.latitude && geo.longitude && window.mods.globe && window.mods.globe.globe) {
             const lat = Number(geo.latitude);
             const lon = Number(geo.longitude);
 
@@ -152,7 +160,7 @@ class LocationGlobe {
             });
             let mark = window.mods.globe.globe.addMarker(lat, lon, '', true);
             setTimeout(() => {
-                mark.remove();
+                if (mark && typeof mark.remove === "function") mark.remove();
             }, 3000);
         }
     }
@@ -190,33 +198,40 @@ class LocationGlobe {
         }
     }
     async updateConOnlineConnection() {
-        let newgeo = window.mods.netstat.ipinfo.geo;
-        newgeo.latitude = Math.round(newgeo.latitude*10000)/10000;
-        newgeo.longitude = Math.round(newgeo.longitude*10000)/10000;
+        if (!window.mods.netstat || !window.mods.netstat.ipinfo || !window.mods.netstat.ipinfo.geo) return;
+        let geo = window.mods.netstat.ipinfo.geo;
+        if (typeof geo.latitude !== "number" || typeof geo.longitude !== "number") return;
+        let newgeo = {
+            latitude: Math.round(geo.latitude*10000)/10000,
+            longitude: Math.round(geo.longitude*10000)/10000
+        };
 
         if (newgeo.latitude !== this.lastgeo.latitude || newgeo.longitude !== this.lastgeo.longitude) {
-
-            document.querySelector("i.mod_globe_headerInfo").innerText = `${newgeo.latitude}, ${newgeo.longitude}`;
+            let headerInfo = document.querySelector("i.mod_globe_headerInfo");
+            if (headerInfo) headerInfo.innerText = `${newgeo.latitude}, ${newgeo.longitude}`;
             this.removePins();
             this.removeMarkers();
-            //this.addRandomConnectedPoints();
             this.conns = [];
 
-            this._locPin = this.globe.addPin(newgeo.latitude, newgeo.longitude, "", 1.2);
-            this._locMarker = this.globe.addMarker(newgeo.latitude, newgeo.longitude, "", false, 1.2);
+            if (this.globe && typeof this.globe.addPin === "function") {
+                this._locPin = this.globe.addPin(newgeo.latitude, newgeo.longitude, "", 1.2);
+                this._locMarker = this.globe.addMarker(newgeo.latitude, newgeo.longitude, "", false, 1.2);
+            }
         }
 
         this.lastgeo = newgeo;
-        document.querySelector("div#mod_globe").setAttribute("class", "");
+        let globeEl = document.querySelector("div#mod_globe");
+        if (globeEl) globeEl.setAttribute("class", "");
     }
     updateConns() {
-        if (!window.mods.globe.globe || window.mods.netstat.offline) return false;
+        if (!window.mods.globe || !window.mods.globe.globe || !window.mods.netstat || window.mods.netstat.offline) return false;
         window.si.networkConnections().then(conns => {
+            if (!conns || !Array.isArray(conns)) return;
             let newconns = [];
             conns.forEach(conn => {
                 let ip = conn.peeraddress;
                 let state = conn.state;
-                if (state === "ESTABLISHED" && ip !== "0.0.0.0" && ip !== "127.0.0.1" && ip !== "::") {
+                if (state === "ESTABLISHED" && ip && ip !== "0.0.0.0" && ip !== "127.0.0.1" && ip !== "::") {
                     newconns.push(ip);
                 }
             });
@@ -232,7 +247,7 @@ class LocationGlobe {
             newconns.forEach(ip => {
                 this.addConn(ip);
             });
-        });
+        }).catch(() => {});
     }
 }
 

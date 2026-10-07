@@ -24,6 +24,11 @@ class Toplist {
 
         this.currentlyUpdating = true;
         window.si.processes().then(data => {
+            if (!data || !data.list || !Array.isArray(data.list)) {
+                this.currentlyUpdating = false;
+                return;
+            }
+
             if (window.settings.excludeThreadsFromToplist === true) {
                 data.list = data.list.sort((a, b) => {
                     return (a.pid-b.pid);
@@ -53,6 +58,8 @@ class Toplist {
                                 <td>${Math.round(proc.mem*10)/10}%</td>`;
                 document.getElementById("mod_toplist_table").append(el);
             });
+            this.currentlyUpdating = false;
+        }).catch(() => {
             this.currentlyUpdating = false;
         });
     }

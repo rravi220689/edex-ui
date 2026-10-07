@@ -31,18 +31,22 @@ class HardwareInspector {
     updateInfo() {
         window.si.system().then(d => {
             window.si.chassis().then(e => {
-                document.getElementById("mod_hardwareInspector_manufacturer").innerText = this._trimDataString(d.manufacturer);
-                document.getElementById("mod_hardwareInspector_model").innerText = this._trimDataString(d.model, d.manufacturer, e.type);
-                document.getElementById("mod_hardwareInspector_chassis").innerText = e.type;
-            });
-        });
+                let mfgEl = document.getElementById("mod_hardwareInspector_manufacturer");
+                let modelEl = document.getElementById("mod_hardwareInspector_model");
+                let chassisEl = document.getElementById("mod_hardwareInspector_chassis");
+                if (mfgEl && d) mfgEl.innerText = this._trimDataString(d.manufacturer);
+                if (modelEl && d) modelEl.innerText = this._trimDataString(d.model, d ? d.manufacturer : "", e ? e.type : "");
+                if (chassisEl && e) chassisEl.innerText = e.type || "DESKTOP";
+            }).catch(() => {});
+        }).catch(() => {});
     }
     _trimDataString(str, ...filters) {
+        if (!str || typeof str !== "string") return str ? String(str) : "UNKNOWN";
         return str.trim().split(" ").filter(word => {
             if (typeof filters !== "object") return true;
 
             return !filters.includes(word);
-        }).slice(0, 2).join(" ");
+        }).slice(0, 2).join(" ") || "UNKNOWN";
     }
 }
 

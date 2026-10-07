@@ -65,26 +65,30 @@ class Netstat {
     }
     updateInfo() {
         window.si.networkInterfaces().then(async data => {
-            let offline = false;
+            if (!data || !Array.isArray(data) || data.length === 0) {
+                this.offline = true;
+                return;
+            }
 
+            let offline = false;
             let net = data[0];
             let netID = 0;
 
             if (typeof window.settings.iface === "string") {
-                while (net.iface !== window.settings.iface) {
+                while (net && net.iface !== window.settings.iface) {
                     netID++;
                     if (data[netID]) {
                         net = data[netID];
                     } else {
                         // No detected interface has the custom iface name, fallback to automatic detection on next loop
                         window.settings.iface = false;
-                        return false;
+                        net = data[0];
+                        break;
                     }
                 }
             } else {
                 // Find the first external, IPv4 connected networkInterface that has a MAC address set
-
-                while (net.operstate !== "up" || net.internal === true || net.ip4 === "" || net.mac === "") {
+                while (net && (net.operstate !== "up" || net.internal === true || net.ip4 === "" || net.mac === "")) {
                     netID++;
                     if (data[netID]) {
                         net = data[netID];
@@ -97,10 +101,12 @@ class Netstat {
                         document.querySelector("#mod_netstat_innercontainer > div:first-child > h2").innerHTML = "OFFLINE";
                         document.querySelector("#mod_netstat_innercontainer > div:nth-child(2) > h2").innerHTML = "--.--.--.--";
                         document.querySelector("#mod_netstat_innercontainer > div:nth-child(3) > h2").innerHTML = "--ms";
-                        break;
+                        return;
                     }
                 }
             }
+
+            if (!net) return;
 
             if (net.ip4 !== this.internalIPv4) this.runsBeforeGeoIPUpdate = 0;
 
@@ -120,9 +126,10 @@ class Netstat {
                         res.on("end", () => {
                             try {
                                 let data = JSON.parse(rawData);
+                                let geoData = (this.geoLookup && typeof this.geoLookup.get === "function") ? this.geoLookup.get(data.ip) : null;
                                 this.ipinfo = {
                                     ip: data.ip,
-                                    geo: this.geoLookup.get(data.ip).location
+                                    geo: (geoData && geoData.location) ? geoData.location : null
                                 };
 
                                 let ip = this.ipinfo.ip;
@@ -158,6 +165,8 @@ class Netstat {
                     document.querySelector("#mod_netstat_innercontainer > div:nth-child(3) > h2").innerHTML = Math.round(p)+"ms";
                 }
             }
+        }).catch(err => {
+            this.offline = true;
         });
     }
     ping(target, port, local) {

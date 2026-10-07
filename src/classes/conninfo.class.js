@@ -72,6 +72,7 @@ class Conninfo {
         } else {
             document.querySelector("div#mod_conninfo").setAttribute("class", "");
             window.si.networkStats(window.mods.netstat.iface).then(data => {
+                if (!data || !data[0]) return;
 
                 let max0 = this.series[0].maxValue;
                 let max1 = -this.series[1].minValue;
@@ -81,11 +82,19 @@ class Conninfo {
                     this.series[0].maxValue = max1;
                 }
 
-                this.series[0].append(time, data[0].tx_sec/125000);
-                this.series[1].append(time, -data[0].rx_sec/125000);
+                let txSec = (data[0].tx_sec || 0) / 125000;
+                let rxSec = (data[0].rx_sec || 0) / 125000;
 
-                this.total.innerText = `${this._pb(data[0].tx_bytes)} OUT, ${this._pb(data[0].rx_bytes)} IN`.toUpperCase();
-                this.current.innerText = "UP " + parseFloat(data[0].tx_sec/125000).toFixed(2) + " DOWN " + parseFloat(data[0].rx_sec/125000).toFixed(2);
+                this.series[0].append(time, txSec);
+                this.series[1].append(time, -rxSec);
+
+                let txBytes = data[0].tx_bytes || 0;
+                let rxBytes = data[0].rx_bytes || 0;
+
+                this.total.innerText = `${this._pb(txBytes)} OUT, ${this._pb(rxBytes)} IN`.toUpperCase();
+                this.current.innerText = "UP " + parseFloat(txSec).toFixed(2) + " DOWN " + parseFloat(rxSec).toFixed(2);
+            }).catch(e => {
+                // Silently drop transient networkStats error
             });
         }
     }

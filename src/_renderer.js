@@ -467,14 +467,27 @@ async function initUI() {
             <li id="shell_tab1" onclick="window.focusShellTab(1);"><p>EMPTY</p></li>
             <li id="shell_tab2" onclick="window.focusShellTab(2);"><p>EMPTY</p></li>
             <li id="shell_tab3" onclick="window.focusShellTab(3);"><p>EMPTY</p></li>
-            <li id="shell_tab4" onclick="window.focusShellTab(4);"><p>EMPTY</p></li>
+            <li id="shell_tab4" onclick="window.focusBrowserTab();"><p>🌐 BROWSER</p></li>
         </ul>
         <div id="main_shell_innercontainer">
             <pre id="terminal0" class="active"></pre>
             <pre id="terminal1"></pre>
             <pre id="terminal2"></pre>
             <pre id="terminal3"></pre>
-            <pre id="terminal4"></pre>
+            <div id="browser_container">
+                <div id="browser_toolbar">
+                    <button id="browser_btn_back" title="Back">◀</button>
+                    <button id="browser_btn_forward" title="Forward">▶</button>
+                    <button id="browser_btn_reload" title="Reload">⟳</button>
+                    <button id="browser_btn_home" title="Home">⌂</button>
+                    <input type="text" id="browser_url_input" placeholder="ENTER URL OR SEARCH QUERY..." value="https://duckduckgo.com" />
+                    <button id="browser_btn_go">GO</button>
+                    <button id="browser_btn_external" title="Open in System Browser">EXT ↗</button>
+                </div>
+                <div id="browser_webview_wrapper">
+                    <webview id="edex_browser_webview" src="https://duckduckgo.com" allowpopups></webview>
+                </div>
+            </div>
         </div>`;
     window.term = {
         0: new Terminal({
@@ -484,14 +497,19 @@ async function initUI() {
         })
     };
     window.currentTerm = 0;
+    window.isBrowserActive = false;
     window.term[0].onprocesschange = p => {
         document.getElementById("shell_tab0").innerHTML = `<p>MAIN - ${p}</p>`;
     };
     // Prevent losing hardware keyboard focus on the terminal when using touch keyboard
     window.onmouseup = e => {
-        if (window.keyboard.linkedToTerm) window.term[window.currentTerm].term.focus();
+        if (!window.isBrowserActive && window.keyboard && window.keyboard.linkedToTerm && window.term && window.term[window.currentTerm]) {
+            window.term[window.currentTerm].term.focus();
+        }
     };
     window.term[0].term.writeln("\033[1m"+`Welcome to eDEX-UI v${remote.app.getVersion()} - Electron v${process.versions.electron}`+"\033[0m");
+
+    window.initBrowserTab();
 
     await _delay(100);
 
@@ -529,8 +547,169 @@ window.remakeKeyboard = layout => {
     ipc.send("setKbOverride", layout);
 };
 
-window.focusShellTab = number => {
+window.initBrowserTab = () => {
+    const webview = document.getElementById("edex_browser_webview");
+    const urlInput = document.getElementById("browser_url_input");
+    const btnBack = document.getElementById("browser_btn_back");
+    const btnForward = document.getElementById("browser_btn_forward");
+    const btnReload = document.getElementById("browser_btn_reload");
+    const btnHome = document.getElementById("browser_btn_home");
+    const btnGo = document.getElementById("browser_btn_go");
+    const btnExt = document.getElementById("browser_btn_external");
+
+    if (!webview || !urlInput) return;
+
+    const navigateTo = (rawQuery) => {
+        if (!rawQuery) return;
+        let query = rawQuery.trim();
+        let targetUrl = query;
+        if (/^https?:\/\//i.test(query) || /^file:\/\//i.test(query)) {
+            targetUrl = query;
+        } else if (/^(localhost|127\.0\.0\.1)(:\d+)?(\/.*)?$/i.test(query)) {
+            targetUrl = "http://" + query;
+        } else if (/^[a-zA-Z0-9-]+(\.[a-zA-Z0-9-]+)+(\/.*)?$/.test(query) && !query.includes(" ")) {
+            targetUrl = "https://" + query;
+        } else {
+            targetUrl = "https://duckduckgo.com/?q=" + encodeURIComponent(query);
+        }
+        urlInput.value = targetUrl;
+        try {
+            webview.loadURL(targetUrl);
+        } catch(e) {
+            console.warn("Failed to load URL:", e);
+        }
+    };
+
+    if (btnGo) btnGo.onclick = () => navigateTo(urlInput.value);
+    urlInput.onkeydown = e => {
+        if (e.key === "Enter") {
+            navigateTo(urlInput.value);
+            urlInput.blur();
+        }
+    };
+
+    urlInput.onfocus = () => {
+        if (window.keyboard) window.keyboard.detach();
+    };
+
+    if (btnBack) {
+        btnBack.onclick = () => {
+            try {
+                if (webview.canGoBack()) webview.goBack();
+            } catch(e) {}
+        };
+    }
+    if (btnForward) {
+        btnForward.onclick = () => {
+            try {
+                if (webview.canGoForward()) webview.goForward();
+            } catch(e) {}
+        };
+    }
+    if (btnReload) {
+        btnReload.onclick = () => {
+            try {
+                if (webview.isLoading()) {
+                    webview.stop();
+                } else {
+                    webview.reload();
+                }
+            } catch(e) {}
+        };
+    }
+    if (btnHome) {
+        btnHome.onclick = () => {
+            navigateTo("https://duckduckgo.com");
+        };
+    }
+    if (btnExt) {
+        btnExt.onclick = () => {
+            try {
+                let current = webview.getURL() || urlInput.value;
+                if (current) electron.shell.openExternal(current);
+            } catch(e) {}
+        };
+    }
+
+    webview.addEventListener("did-start-loading", () => {
+        if (btnReload) btnReload.innerText = "✕";
+    });
+
+    webview.addEventListener("did-stop-loading", () => {
+        if (btnReload) btnReload.innerText = "⟳";
+        try {
+            let u = webview.getURL();
+            if (u && !u.startsWith("data:")) {
+                urlInput.value = u;
+            }
+            let title = webview.getTitle();
+            let tabLabel = title ? title.slice(0, 12).toUpperCase() : "BROWSER";
+            const tab4 = document.getElementById("shell_tab4");
+            if (tab4) tab4.innerHTML = `<p>🌐 ${tabLabel}</p>`;
+        } catch(e) {}
+    });
+
+    webview.addEventListener("new-window", e => {
+        if (e && e.url) {
+            try {
+                webview.loadURL(e.url);
+            } catch(err) {}
+        }
+    });
+
+    webview.addEventListener("focus", () => {
+        if (window.keyboard) window.keyboard.detach();
+    });
+};
+
+window.focusBrowserTab = () => {
     window.audioManager.folder.play();
+
+    // Deactivate all tab headers except tab 4
+    document.querySelectorAll("ul#main_shell_tabs > li").forEach(e => {
+        e.setAttribute("class", "");
+    });
+    const tab4 = document.getElementById("shell_tab4");
+    if (tab4) tab4.setAttribute("class", "active");
+
+    // Deactivate all terminal pre containers
+    document.querySelectorAll("div#main_shell_innercontainer > pre").forEach(e => {
+        e.setAttribute("class", "");
+    });
+
+    // Activate browser container
+    const bContainer = document.getElementById("browser_container");
+    if (bContainer) {
+        bContainer.setAttribute("class", "active");
+    }
+
+    if (window.keyboard) {
+        window.keyboard.detach();
+    }
+
+    window.isBrowserActive = true;
+};
+
+window.focusShellTab = number => {
+    if (number === 4) {
+        return window.focusBrowserTab();
+    }
+
+    window.audioManager.folder.play();
+
+    // Deactivate browser container if active
+    const bContainer = document.getElementById("browser_container");
+    if (bContainer) {
+        bContainer.setAttribute("class", "");
+    }
+    const tab4 = document.getElementById("shell_tab4");
+    if (tab4) {
+        tab4.setAttribute("class", "");
+    }
+    window.isBrowserActive = false;
+    if (window.keyboard) {
+        window.keyboard.attach();
+    }
 
     if (number !== window.currentTerm && window.term[number]) {
         window.currentTerm = number;
@@ -550,7 +729,7 @@ window.focusShellTab = number => {
         window.term[number].resendCWD();
 
         window.fsDisp.followTab();
-    } else if (number > 0 && number <= 4 && window.term[number] !== null && typeof window.term[number] !== "object") {
+    } else if (number > 0 && number < 4 && window.term[number] !== null && typeof window.term[number] !== "object") {
         window.term[number] = null;
 
         document.getElementById("shell_tab"+number).innerHTML = "<p>LOADING...</p>";
@@ -594,26 +773,32 @@ window.openSettings = async () => {
     if (document.getElementById("settingsEditor")) return;
 
     // Build lists of available keyboards, themes, monitors
-    let keyboards, themes, monitors, ifaces;
-    fs.readdirSync(keyboardsDir).forEach(kb => {
-        if (!kb.endsWith(".json")) return;
-        kb = kb.replace(".json", "");
-        if (kb === window.settings.keyboard) return;
-        keyboards += `<option>${kb}</option>`;
-    });
-    fs.readdirSync(themesDir).forEach(th => {
-        if (!th.endsWith(".json")) return;
-        th = th.replace(".json", "");
-        if (th === window.settings.theme) return;
-        themes += `<option>${th}</option>`;
-    });
+    let keyboards = "", themes = "", monitors = "", ifaces = "";
+    try {
+        fs.readdirSync(keyboardsDir).forEach(kb => {
+            if (!kb.endsWith(".json")) return;
+            kb = kb.replace(".json", "");
+            if (kb === window.settings.keyboard) return;
+            keyboards += `<option>${kb}</option>`;
+        });
+    } catch(e) {}
+    try {
+        fs.readdirSync(themesDir).forEach(th => {
+            if (!th.endsWith(".json")) return;
+            th = th.replace(".json", "");
+            if (th === window.settings.theme) return;
+            themes += `<option>${th}</option>`;
+        });
+    } catch(e) {}
     for (let i = 0; i < remote.screen.getAllDisplays().length; i++) {
         if (i !== window.settings.monitor) monitors += `<option>${i}</option>`;
     }
-    let nets = await window.si.networkInterfaces();
-    nets.forEach(net => {
-        if (net.iface !== window.mods.netstat.iface) ifaces += `<option>${net.iface}</option>`;
-    });
+    let nets = await window.si.networkInterfaces().catch(() => []);
+    if (Array.isArray(nets)) {
+        nets.forEach(net => {
+            if (net && (!window.mods.netstat || net.iface !== window.mods.netstat.iface)) ifaces += `<option>${net.iface}</option>`;
+        });
+    }
 
     // Unlink the tactile keyboard from the terminal emulator to allow filling in the settings fields
     window.keyboard.detach();
@@ -979,37 +1164,42 @@ window.openShortcutsHelp = () => {
 window.useAppShortcut = action => {
     switch(action) {
         case "COPY":
-            window.term[window.currentTerm].clipboard.copy();
+            if (window.term && window.term[window.currentTerm]) window.term[window.currentTerm].clipboard.copy();
             return true;
         case "PASTE":
-            window.term[window.currentTerm].clipboard.paste();
+            if (window.term && window.term[window.currentTerm]) window.term[window.currentTerm].clipboard.paste();
             return true;
         case "NEXT_TAB":
-                if (window.term[window.currentTerm+1]) {
-                    window.focusShellTab(window.currentTerm+1);
-                } else if (window.term[window.currentTerm+2]) {
-                    window.focusShellTab(window.currentTerm+2);
-                } else if (window.term[window.currentTerm+3]) {
-                    window.focusShellTab(window.currentTerm+3);
-                } else if (window.term[window.currentTerm+4]) {
-                    window.focusShellTab(window.currentTerm+4);
-                } else {
-                    window.focusShellTab(0);
+            if (window.isBrowserActive) {
+                window.focusShellTab(0);
+            } else {
+                let next = window.currentTerm + 1;
+                while (next < 4 && !window.term[next]) {
+                    next++;
                 }
+                if (next < 4 && window.term[next]) {
+                    window.focusShellTab(next);
+                } else {
+                    window.focusBrowserTab();
+                }
+            }
             return true;
         case "PREVIOUS_TAB":
-                let i = window.currentTerm || 4;
-                if (window.term[i] && i !== window.currentTerm) {
-                    window.focusShellTab(i);
-                } else if (window.term[i-1]) {
-                    window.focusShellTab(i-1);
-                } else if (window.term[i-2]) {
-                    window.focusShellTab(i-2);
-                } else if (window.term[i-3]) {
-                    window.focusShellTab(i-3);
-                } else if (window.term[i-4]) {
-                    window.focusShellTab(i-4);
+            if (window.isBrowserActive) {
+                let prev = 3;
+                while (prev >= 0 && !window.term[prev]) {
+                    prev--;
                 }
+                window.focusShellTab(prev >= 0 ? prev : 0);
+            } else if (window.currentTerm === 0) {
+                window.focusBrowserTab();
+            } else {
+                let prev = window.currentTerm - 1;
+                while (prev >= 0 && !window.term[prev]) {
+                    prev--;
+                }
+                window.focusShellTab(prev >= 0 ? prev : 0);
+            }
             return true;
         case "TAB_1":
             window.focusShellTab(0);
@@ -1024,7 +1214,7 @@ window.useAppShortcut = action => {
             window.focusShellTab(3);
             return true;
         case "TAB_5":
-            window.focusShellTab(4);
+            window.focusBrowserTab();
             return true;
         case "SETTINGS":
             window.openSettings();

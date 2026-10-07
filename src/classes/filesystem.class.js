@@ -105,7 +105,10 @@ class FilesystemDisplay {
                 if (cwd && cwd !== this.cwd_path && window.currentTerm === num) {
                     this.cwd_path = cwd;
                     if (this._fsWatcher) {
-                        this._fsWatcher.close();
+                        try {
+                            this._fsWatcher.close();
+                        } catch(e) {}
+                        this._fsWatcher = null;
                     }
                     if (cwd.startsWith("FALLBACK |-- ")) {
                         this.readFS(cwd.slice(13));
@@ -121,13 +124,23 @@ class FilesystemDisplay {
 
         this.watchFS = dir => {
             if (this._fsWatcher) {
-                this._fsWatcher.close();
+                try {
+                    this._fsWatcher.close();
+                } catch(e) {}
+                this._fsWatcher = null;
             }
-            this._fsWatcher = fs.watch(dir, (eventType, filename) => {
-                if (eventType != "change") { // #758 - Don't refresh file view if only file contents have changed.
-                    this._runNextTick = true;
+            try {
+                this._fsWatcher = fs.watch(dir, (eventType, filename) => {
+                    if (eventType != "change") { // #758 - Don't refresh file view if only file contents have changed.
+                        this._runNextTick = true;
+                    }
+                });
+                if (this._fsWatcher && this._fsWatcher.on) {
+                    this._fsWatcher.on("error", () => {});
                 }
-            });
+            } catch(e) {
+                // Ignore watcher errors (permissions, missing dir, etc.)
+            }
         };
 
         this.toggleHidedotfiles = () => {
@@ -173,14 +186,20 @@ class FilesystemDisplay {
                 } else {
                     this.setFailedState();
                 }
+                return null;
             });
+
+            if (!content || this.failed) {
+                this._reading = false;
+                return false;
+            }
 
             this.reCalculateDiskUsage(tcwd);
 
             this.cwd = [];
 
             await new Promise((resolve, reject) => {
-                if (content.length === 0) resolve();
+                if (!content || content.length === 0) return resolve();
 
                 content.forEach(async (file, i) => {
                     let fstat = await this._asyncFSwrapper.lstat(path.join(tcwd, file)).catch(e => {
@@ -234,7 +253,10 @@ class FilesystemDisplay {
                 });
             }).catch(() => { this.setFailedState() });
 
-            if (this.failed) return false;
+            if (this.failed) {
+                this._reading = false;
+                return false;
+            }
 
             let ordering = {
                 dir: 0,
@@ -267,22 +289,24 @@ class FilesystemDisplay {
         this.readDevices = async () => {
             if (this.failed === true) return false;
 
-            let blocks = await window.si.blockDevices();
+            let blocks = await window.si.blockDevices().catch(() => []);
             let devices = [];
-            blocks.forEach(block => {
-                if (fs.existsSync(block.mount)) {
-                    let type = (block.type === "rom") ? "rom" : "disk";
-                    if (block.removable && block.type !== "rom") {
-                        type = "usb";
-                    }
+            if (Array.isArray(blocks)) {
+                blocks.forEach(block => {
+                    if (block && block.mount && fs.existsSync(block.mount)) {
+                        let type = (block.type === "rom") ? "rom" : "disk";
+                        if (block.removable && block.type !== "rom") {
+                            type = "usb";
+                        }
 
-                    devices.push({
-                        name: (block.label !== "") ? `${block.label} (${block.name})` : `${block.mount} (${block.name})`,
-                        type,
-                        path: block.mount
-                    });
-                }
-            });
+                        devices.push({
+                            name: (block.label !== "") ? `${block.label} (${block.name})` : `${block.mount} (${block.name})`,
+                            type,
+                            path: block.mount
+                        });
+                    }
+                });
+            }
 
             this.render(devices, true);
         };

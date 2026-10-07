@@ -216,6 +216,7 @@ function createWindow(settings) {
             nodeIntegration: true,
             nodeIntegrationInSubFrames: false,
             allowRunningInsecureContent: false,
+            webviewTag: true,
             experimentalFeatures: settings.experimentalFeatures || false
         }
     });
@@ -373,7 +374,15 @@ app.on('ready', async () => {
 });
 
 app.on('web-contents-created', (e, contents) => {
-    // Prevent creating more than one window
+    if (contents.getType() === 'webview') {
+        contents.on('new-window', (event, url) => {
+            event.preventDefault();
+            contents.loadURL(url);
+        });
+        return;
+    }
+
+    // Prevent creating more than one window for main UI
     contents.on('new-window', (e, url) => {
         e.preventDefault();
         shell.openExternal(url);
