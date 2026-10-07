@@ -243,6 +243,19 @@ function createWindow(settings) {
         signale.warn("Failed to enable remote on webContents:", e);
     }
 
+    win.webContents.on('crashed', (event, killed) => {
+        signale.fatal('Renderer crashed! killed:', killed);
+    });
+    win.webContents.on('render-process-gone', (event, details) => {
+        signale.fatal(`Render process gone! reason: ${details.reason}, exitCode: ${details.exitCode}`);
+    });
+    win.webContents.on('did-fail-load', (event, errorCode, errorDescription) => {
+        signale.fatal(`Failed to load ui.html: ${errorCode} ${errorDescription}`);
+    });
+    win.webContents.on('console-message', (event, level, message, line, sourceId) => {
+        signale.info(`[Renderer] [L${level}] ${message} (${sourceId}:${line})`);
+    });
+
     win.loadURL(url.format({
         pathname: path.join(__dirname, 'ui.html'),
         protocol: 'file:',
