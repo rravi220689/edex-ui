@@ -610,22 +610,42 @@ async function initUI() {
 
     await _delay(100);
 
-    window.fsDisp = new FilesystemDisplay({
-        parentId: "filesystem"
-    });
-
-    await _delay(200);
-
-    document.getElementById("filesystem").setAttribute("style", "opacity: 1;");
-
-    // Resend terminal CWD to fsDisp if we're hot reloading
-    if (window.performance.navigation.type === 1) {
-        window.term[window.currentTerm].resendCWD();
+    try {
+        stepLog("14F1 - initializing filesystem display");
+        window.fsDisp = new FilesystemDisplay({
+            parentId: "filesystem"
+        });
+        stepLog("14F2 - filesystem display created successfully");
+    } catch(fsErr) {
+        stepLog("WARNING: FilesystemDisplay failed to initialize: " + (fsErr && fsErr.stack || fsErr));
     }
 
     await _delay(200);
 
-    window.updateCheck = new UpdateChecker();
+    try {
+        const fsElem = document.getElementById("filesystem");
+        if (fsElem) fsElem.setAttribute("style", "opacity: 1;");
+    } catch(e) {}
+
+    // Resend terminal CWD to fsDisp if we're hot reloading
+    try {
+        if (window.performance && window.performance.navigation && window.performance.navigation.type === 1) {
+            if (window.term && window.term[window.currentTerm] && typeof window.term[window.currentTerm].resendCWD === "function") {
+                window.term[window.currentTerm].resendCWD();
+            }
+        }
+    } catch(e) {}
+
+    await _delay(200);
+
+    try {
+        stepLog("14G1 - initializing update checker");
+        window.updateCheck = new UpdateChecker();
+        stepLog("14G2 - update checker initialized");
+    } catch(ucErr) {
+        stepLog("WARNING: UpdateChecker failed: " + (ucErr && ucErr.stack || ucErr));
+    }
+
     stepLog("14Z - initUI completed successfully!");
     } catch(err) {
         stepLog("FATAL ERROR inside initUI: " + (err && err.stack || err));

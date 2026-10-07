@@ -329,7 +329,7 @@ app.on('ready', async () => {
         debugLog(`[TTY ONCLOSED] code: ${code}, signal: ${signal}`);
         tty.ondisconnected = () => {};
         signale.complete("Terminal exited", code, signal);
-        app.quit();
+        // Retain eDEX-UI alive so that AI Core, browser, and UI controls remain accessible
     };
     tty.onopened = () => {
         debugLog(`[TTY ONOPENED Connected to frontend]`);
