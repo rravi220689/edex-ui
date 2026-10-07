@@ -76,9 +76,11 @@ const innerFontsDir = path.join(__dirname, "assets/fonts");
 if (process.env.http_proxy) delete process.env.http_proxy;
 if (process.env.https_proxy) delete process.env.https_proxy;
 
-// Bypass GPU acceleration blocklist, trading a bit of stability for a great deal of performance, mostly on Linux
+// Bypass GPU acceleration blocklist to enable WebGL and software rasterizer
+app.commandLine.appendSwitch("ignore-gpu-blocklist");
+app.commandLine.appendSwitch("enable-webgl");
+app.commandLine.appendSwitch("enable-webgl2-compute-context");
 if (process.platform === "linux") {
-    app.commandLine.appendSwitch("ignore-gpu-blocklist");
     app.commandLine.appendSwitch("enable-gpu-rasterization");
     app.commandLine.appendSwitch("enable-video-decode");
 }
@@ -95,7 +97,6 @@ try {
     if (shouldDisableGPU) {
         app.disableHardwareAcceleration();
         app.commandLine.appendSwitch("disable-gpu");
-        app.commandLine.appendSwitch("disable-software-rasterizer");
         app.commandLine.appendSwitch("disable-gpu-compositing");
         app.commandLine.appendSwitch("disable-gpu-rasterization");
         app.commandLine.appendSwitch("disable-gpu-process-crash-limit");
