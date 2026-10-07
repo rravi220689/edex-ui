@@ -47,6 +47,7 @@ window.addEventListener("error", e => {
 });
 
 window.addEventListener("unhandledrejection", e => {
+    e.preventDefault();
     try {
         require("fs").appendFileSync("C:\\Users\\Avinash\\.gemini\\antigravity\\scratch\\edex_debug.log", `[RENDERER UNHANDLED REJECTION] ${e.reason}\n`);
     } catch(err) {}
@@ -214,10 +215,12 @@ function initGraphicalErrorHandling() {
     };
 
     window.addEventListener("unhandledrejection", e => {
+        e.preventDefault();
         let reason = e.reason ? (e.reason.message || e.reason) : "";
         if (/ETIMEDOUT|ENOTFOUND|ECONNRESET|ECONNREFUSED|Socket timeout/i.test(reason)) {
-            e.preventDefault();
             console.warn("Suppressed unhandled network rejection:", reason);
+        } else {
+            console.warn("Suppressed unhandled rejection:", reason);
         }
     });
 
