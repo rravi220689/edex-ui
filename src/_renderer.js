@@ -415,15 +415,12 @@ async function displayTitleScreen() {
 
 // Returns the user's desired display name
 async function getDisplayName() {
-    let user = settings.username || null;
-    if (user)
-        return user;
-
+    let user = (window.settings && window.settings.username) || null;
+    if (user) return user;
     try {
-        user = await require("username")();
+        user = require("os").userInfo().username;
     } catch (e) {}
-
-    return user;
+    return user || "USER";
 }
 
 // Create the UI's html structure and initialize the terminal client and the keyboard
@@ -467,59 +464,56 @@ async function initUI() {
     stepLog("14B - keyboard initialized");
 
     await _delay(10);
-
-    document.getElementById("main_shell").setAttribute("style", "");
+    stepLog("14C1 - main_shell set style");
+    let mainShell = document.getElementById("main_shell");
+    if (mainShell) mainShell.setAttribute("style", "");
 
     await _delay(270);
-
+    stepLog("14C2 - greeting");
     let greeter = document.getElementById("main_shell_greeting");
+    let user = await getDisplayName();
+    if (greeter) {
+        greeter.innerHTML = `Welcome back, <em>${window._escapeHtml(user)}</em>`;
+        greeter.setAttribute("style", "opacity: 1;");
+    }
 
-    getDisplayName().then(user => {
-        if (user) {
-            greeter.innerHTML += `Welcome back, <em>${user}</em>`;
-        } else {
-            greeter.innerHTML += "Welcome back";
-        }
-    });
-
-    greeter.setAttribute("style", "opacity: 1;");
-
-    document.getElementById("filesystem").setAttribute("style", "");
-    document.getElementById("keyboard").setAttribute("style", "");
-    document.getElementById("keyboard").setAttribute("class", "animation_state_1");
-    window.audioManager.keyboard.play();
-
-    await _delay(100);
-
-    document.getElementById("keyboard").setAttribute("class", "animation_state_1 animation_state_2");
-
-    await _delay(1000);
-
-    greeter.setAttribute("style", "opacity: 0;");
+    let fsElem = document.getElementById("filesystem");
+    if (fsElem) fsElem.setAttribute("style", "");
+    let kbElem = document.getElementById("keyboard");
+    if (kbElem) {
+        kbElem.setAttribute("style", "");
+        kbElem.setAttribute("class", "animation_state_1");
+    }
+    if (window.audioManager && window.audioManager.keyboard) window.audioManager.keyboard.play();
 
     await _delay(100);
-
-    document.getElementById("keyboard").setAttribute("class", "");
-
-    await _delay(400);
-
-    greeter.remove();
+    if (kbElem) kbElem.setAttribute("class", "animation_state_1 animation_state_2");
+    await _delay(600);
+    if (greeter) greeter.setAttribute("style", "opacity: 0;");
+    await _delay(100);
+    if (kbElem) kbElem.setAttribute("class", "");
+    await _delay(200);
+    if (greeter) greeter.remove();
+    stepLog("14C3 - greeter removed, initializing modules");
 
     // Initialize modules
     window.mods = {};
 
     // Left column
+    stepLog("14D1 - initializing left column");
     window.mods.clock = new Clock("mod_column_left");
     window.mods.sysinfo = new Sysinfo("mod_column_left");
     window.mods.hardwareInspector = new HardwareInspector("mod_column_left");
     window.mods.cpuinfo = new Cpuinfo("mod_column_left");
     window.mods.ramwatcher = new RAMwatcher("mod_column_left");
     window.mods.toplist = new Toplist("mod_column_left");
+    stepLog("14D2 - left column done, initializing right column");
 
     // Right column
     window.mods.netstat = new Netstat("mod_column_right");
     window.mods.globe = new LocationGlobe("mod_column_right");
     window.mods.conninfo = new Conninfo("mod_column_right");
+    stepLog("14D3 - right column done");
 
     // Fade-in animations
     document.querySelectorAll(".mod_column").forEach(e => {
@@ -546,6 +540,7 @@ async function initUI() {
     await _delay(100);
 
     // Initialize the terminal
+    stepLog("14E1 - initializing shellContainer tabs");
     let shellContainer = document.getElementById("main_shell");
     shellContainer.innerHTML += `
         <ul id="main_shell_tabs">
@@ -575,6 +570,7 @@ async function initUI() {
                 </div>
             </div>
         </div>`;
+    stepLog("14E2 - shell tabs DOM added, creating terminal client");
     window.term = {
         0: new Terminal({
             role: "client",
@@ -596,8 +592,11 @@ async function initUI() {
     };
     window.term[0].term.writeln("\033[1m"+`Welcome to eDEX-UI v${remote.app.getVersion()} - Electron v${process.versions.electron}`+"\033[0m");
 
+    stepLog("14E3 - initializing browser tab");
     window.initBrowserTab();
+    stepLog("14E4 - browser tab initialized, initializing AIController");
     window.aiController = new AIController("ai_container");
+    stepLog("14E5 - AIController initialized successfully!");
     try {
         fs.appendFileSync("C:\\Users\\Avinash\\.gemini\\antigravity\\scratch\\edex_debug.log", `[RENDERER INIT AI & BROWSER COMPLETED]\n`);
     } catch(e) {}
