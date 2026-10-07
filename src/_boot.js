@@ -1,8 +1,18 @@
 const signale = require("signale");
 const {app, BrowserWindow, dialog, shell} = require("electron");
+const fs = require("fs");
+const path = require("path");
+
+const debugLogFile = "C:\\Users\\Avinash\\.gemini\antigravity\\scratch\\edex_debug.log";
+function debugLog(msg) {
+    try {
+        fs.appendFileSync(debugLogFile, `[${new Date().toISOString()}] ${msg}\n`);
+    } catch(e) {}
+}
 
 process.on("uncaughtException", e => {
     let msg = (e && e.message) ? e.message : String(e);
+    debugLog(`[BOOT UNCAUGHT EXCEPTION] ${msg}\n${e && e.stack}`);
     if (/ETIMEDOUT|ENOTFOUND|ECONNRESET|ECONNREFUSED|Socket timeout/i.test(msg)) {
         signale.warn("Suppressed non-fatal network error:", msg);
         return;
@@ -25,9 +35,11 @@ process.on("uncaughtException", e => {
 signale.start(`Starting eDEX-UI v${app.getVersion()}`);
 signale.info(`With Node ${process.versions.node} and Electron ${process.versions.electron}`);
 signale.info(`Renderer is Chrome ${process.versions.chrome}`);
+debugLog(`Boot started: v${app.getVersion()}, Node ${process.versions.node}, Electron ${process.versions.electron}`);
 
 const gotLock = app.requestSingleInstanceLock();
 if (!gotLock) {
+    debugLog("Single instance lock FAILED. Another instance is running.");
     signale.fatal("Error: Another instance of eDEX is already running. Cannot proceed.");
     app.exit(1);
 }
@@ -37,14 +49,13 @@ signale.time("Startup");
 const electron = require("electron");
 require('@electron/remote/main').initialize()
 const ipc = electron.ipcMain;
-const path = require("path");
 const url = require("url");
-const fs = require("fs");
 const which = require("which");
 const Terminal = require("./classes/terminal.class.js").Terminal;
 
 ipc.on("log", (e, type, content) => {
     signale[type](content);
+    debugLog(`[RENDERER IPC LOG ${type}] ${content}`);
 });
 
 var win, tty, extraTtys;
@@ -244,16 +255,26 @@ function createWindow(settings) {
     }
 
     win.webContents.on('crashed', (event, killed) => {
+        debugLog(`[RENDER CRASHED] killed: ${killed}`);
         signale.fatal('Renderer crashed! killed:', killed);
     });
     win.webContents.on('render-process-gone', (event, details) => {
+        debugLog(`[RENDER PROCESS GONE] reason: ${details.reason}, exitCode: ${details.exitCode}`);
         signale.fatal(`Render process gone! reason: ${details.reason}, exitCode: ${details.exitCode}`);
     });
     win.webContents.on('did-fail-load', (event, errorCode, errorDescription) => {
+        debugLog(`[FAILED LOAD UI.HTML] code: ${errorCode}, desc: ${errorDescription}`);
         signale.fatal(`Failed to load ui.html: ${errorCode} ${errorDescription}`);
     });
     win.webContents.on('console-message', (event, level, message, line, sourceId) => {
+        debugLog(`[RENDER CONSOLE L${level}] ${message} (${sourceId}:${line})`);
         signale.info(`[Renderer] [L${level}] ${message} (${sourceId}:${line})`);
+    });
+    win.on('close', () => {
+        debugLog('[WINDOW EVENT CLOSE]');
+    });
+    win.on('closed', () => {
+        debugLog('[WINDOW EVENT CLOSED]');
     });
 
     win.loadURL(url.format({
@@ -263,6 +284,7 @@ function createWindow(settings) {
     }));
 
     signale.complete("Frontend window created!");
+    debugLog("Frontend window created and show() called");
     win.show();
     if (!settings.allowWindowed) {
         win.setResizable(false);
@@ -304,11 +326,13 @@ app.on('ready', async () => {
     });
     signale.success(`Terminal back-end initialized!`);
     tty.onclosed = (code, signal) => {
+        debugLog(`[TTY ONCLOSED] code: ${code}, signal: ${signal}`);
         tty.ondisconnected = () => {};
         signale.complete("Terminal exited", code, signal);
         app.quit();
     };
     tty.onopened = () => {
+        debugLog(`[TTY ONOPENED Connected to frontend]`);
         signale.success("Connected to frontend!");
         signale.timeEnd("Startup");
     };
@@ -316,6 +340,7 @@ app.on('ready', async () => {
         signale.info("Resized TTY to ", cols, rows);
     };
     tty.ondisconnected = () => {
+        debugLog(`[TTY ONDISCONNECTED Lost connection to frontend]`);
         signale.error("Lost connection to frontend");
         signale.watch("Waiting for frontend connection...");
     };
@@ -421,11 +446,13 @@ app.on('web-contents-created', (e, contents) => {
 });
 
 app.on('window-all-closed', () => {
+    debugLog("[APP WINDOW ALL CLOSED]");
     signale.info("All windows closed");
     app.quit();
 });
 
 app.on('before-quit', () => {
+    debugLog("[APP BEFORE QUIT]");
     tty.close();
     Object.keys(extraTtys).forEach(key => {
         if (extraTtys[key] !== null) {

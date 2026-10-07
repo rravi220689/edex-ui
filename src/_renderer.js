@@ -29,9 +29,16 @@ window._delay = ms => {
     });
 };
 
+try {
+    require("fs").appendFileSync("C:\\Users\\Avinash\\.gemini\\antigravity\\scratch\\edex_debug.log", `[RENDERER FILE EXECUTING]\n`);
+} catch(e) {}
+
 // Initiate basic error handling
-window.onerror = (msg, path, line, col, error) => {
-    document.getElementById("boot_screen").innerHTML += `${error} :  ${msg}<br/>==> at ${path}  ${line}:${col}`;
+window.onerror = (msg, errPath, line, col, error) => {
+    try {
+        require("fs").appendFileSync("C:\\Users\\Avinash\\.gemini\\antigravity\\scratch\\edex_debug.log", `[RENDERER TOP ERROR] ${error} : ${msg} at ${errPath}:${line}:${col}\n`);
+    } catch(e) {}
+    document.getElementById("boot_screen").innerHTML += `${error} :  ${msg}<br/>==> at ${errPath}  ${line}:${col}`;
 };
 
 const path = require("path");
@@ -535,6 +542,9 @@ async function initUI() {
 
     window.initBrowserTab();
     window.aiController = new AIController("ai_container");
+    try {
+        fs.appendFileSync("C:\\Users\\Avinash\\.gemini\\antigravity\\scratch\\edex_debug.log", `[RENDERER INIT AI & BROWSER COMPLETED]\n`);
+    } catch(e) {}
 
     await _delay(100);
 
