@@ -28,6 +28,7 @@ window._delay = ms => {
         setTimeout(resolve, ms);
     });
 };
+const _delay = window._delay;
 
 try {
     require("fs").appendFileSync("C:\\Users\\Avinash\\.gemini\\antigravity\\scratch\\edex_debug.log", `[RENDERER FILE EXECUTING]\n`);
@@ -471,12 +472,15 @@ async function initUI() {
     await _delay(270);
     stepLog("14C2 - greeting");
     let greeter = document.getElementById("main_shell_greeting");
+    stepLog("14C2a - before getDisplayName");
     let user = await getDisplayName();
+    stepLog("14C2b - user: " + user);
     if (greeter) {
-        greeter.innerHTML = `Welcome back, <em>${window._escapeHtml(user)}</em>`;
+        greeter.innerHTML = `Welcome back, <em>${window._escapeHtml(String(user))}</em>`;
         greeter.setAttribute("style", "opacity: 1;");
     }
 
+    stepLog("14C2c - styling filesystem & keyboard");
     let fsElem = document.getElementById("filesystem");
     if (fsElem) fsElem.setAttribute("style", "");
     let kbElem = document.getElementById("keyboard");
@@ -484,15 +488,18 @@ async function initUI() {
         kbElem.setAttribute("style", "");
         kbElem.setAttribute("class", "animation_state_1");
     }
-    if (window.audioManager && window.audioManager.keyboard) window.audioManager.keyboard.play();
+    if (window.audioManager && window.audioManager.keyboard) {
+        try { window.audioManager.keyboard.play(); } catch(e) {}
+    }
 
+    stepLog("14C2d - before animation delays");
     await _delay(100);
     if (kbElem) kbElem.setAttribute("class", "animation_state_1 animation_state_2");
-    await _delay(600);
+    await _delay(400);
     if (greeter) greeter.setAttribute("style", "opacity: 0;");
     await _delay(100);
     if (kbElem) kbElem.setAttribute("class", "");
-    await _delay(200);
+    await _delay(100);
     if (greeter) greeter.remove();
     stepLog("14C3 - greeter removed, initializing modules");
 
