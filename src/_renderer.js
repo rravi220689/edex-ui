@@ -60,11 +60,20 @@ window.onerror = (msg, errPath, line, col, error) => {
     document.getElementById("boot_screen").innerHTML += `${error} :  ${msg}<br/>==> at ${errPath}  ${line}:${col}`;
 };
 
+function stepLog(step) {
+    try {
+        require("fs").appendFileSync("C:\\Users\\Avinash\\.gemini\\antigravity\\scratch\\edex_debug.log", `[RENDERER STEP] ${step}\n`);
+    } catch(e) {}
+}
+stepLog("1 - before requires");
+
 const path = require("path");
 const fs = require("fs");
 const electron = require("electron");
 const remote = require("@electron/remote");
 const ipc = electron.ipcRenderer;
+
+stepLog("2 - after requires, before polyfill");
 
 // Polyfill remote on electron and window for legacy calls
 electron.remote = remote;
@@ -78,10 +87,14 @@ const settingsFile = path.join(settingsDir, "settings.json");
 const shortcutsFile = path.join(settingsDir, "shortcuts.json");
 const lastWindowStateFile = path.join(settingsDir, "lastWindowState.json");
 
+stepLog("3 - before loading json configs");
+
 // Load config
 window.settings = require(settingsFile);
 window.shortcuts = require(shortcutsFile);
 window.lastWindowState = require(lastWindowStateFile);
+
+stepLog("4 - configs loaded successfully");
 
 // Load CLI parameters
 if (remote.process.argv.includes("--nointro")) {
@@ -95,8 +108,11 @@ if (remote.process.argv.includes("--nocursor")) {
     window.settings.nocursorOverride = false;
 }
 
+stepLog("5 - CLI params parsed");
+
 // Retrieve theme override (hotswitch)
 ipc.once("getThemeOverride", (e, theme) => {
+    stepLog("6 - inside getThemeOverride callback");
     if (theme !== null) {
         window.settings.theme = theme;
         window.settings.nointroOverride = true;
@@ -108,12 +124,14 @@ ipc.once("getThemeOverride", (e, theme) => {
 ipc.send("getThemeOverride");
 // Same for keyboard override/hotswitch
 ipc.once("getKbOverride", (e, layout) => {
+    stepLog("7 - inside getKbOverride callback");
     if (layout !== null) {
         window.settings.keyboard = layout;
         window.settings.nointroOverride = true;
     }
 });
 ipc.send("getKbOverride");
+stepLog("8 - IPC getThemeOverride sent");
 
 // Load UI theme
 window._loadTheme = theme => {
