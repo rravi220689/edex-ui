@@ -186,7 +186,9 @@ class Terminal {
                 this.term.loadAddon(attachAddon);
                 this.fit();
             };
-            this.socket.onerror = e => {throw JSON.stringify(e)};
+            this.socket.onerror = e => {
+                console.warn("Terminal socket error:", e);
+            };
             this.socket.onclose = e => {
                 if (this.onclose) {
                     this.onclose(e);
