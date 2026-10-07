@@ -4,13 +4,14 @@
  * Does not depend on any cloud or external AI services.
  */
 
-const { exec, spawn } = require("child_process");
-const path = require("path");
-const fs = require("fs");
-const os = require("os");
-const electron = require("electron");
+(() => {
+    const { exec, spawn } = require("child_process");
+    const path = require("path");
+    const fs = require("fs");
+    const os = require("os");
+    const electron = require("electron");
 
-class AIController {
+    class AIController {
     constructor(containerId) {
         this.container = document.getElementById(containerId);
         if (!this.container) return;
@@ -750,6 +751,8 @@ class AIController {
     }
 }
 
-module.exports = {
-    AIController
-};
+    window.AIController = AIController;
+    if (typeof module !== "undefined" && module.exports) {
+        module.exports = { AIController };
+    }
+})();
