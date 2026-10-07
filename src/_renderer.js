@@ -33,6 +33,25 @@ try {
     require("fs").appendFileSync("C:\\Users\\Avinash\\.gemini\\antigravity\\scratch\\edex_debug.log", `[RENDERER FILE EXECUTING]\n`);
 } catch(e) {}
 
+process.on("uncaughtException", err => {
+    try {
+        let msg = (err && err.stack) ? err.stack : String(err);
+        require("fs").appendFileSync("C:\\Users\\Avinash\\.gemini\\antigravity\\scratch\\edex_debug.log", `[RENDERER PROCESS UNCAUGHT] ${msg}\n`);
+    } catch(e) {}
+});
+
+window.addEventListener("error", e => {
+    try {
+        require("fs").appendFileSync("C:\\Users\\Avinash\\.gemini\\antigravity\\scratch\\edex_debug.log", `[RENDERER WIN ERROR EVENT] ${e.message} at ${e.filename}:${e.lineno}:${e.colno}\n`);
+    } catch(err) {}
+});
+
+window.addEventListener("unhandledrejection", e => {
+    try {
+        require("fs").appendFileSync("C:\\Users\\Avinash\\.gemini\\antigravity\\scratch\\edex_debug.log", `[RENDERER UNHANDLED REJECTION] ${e.reason}\n`);
+    } catch(err) {}
+});
+
 // Initiate basic error handling
 window.onerror = (msg, errPath, line, col, error) => {
     try {

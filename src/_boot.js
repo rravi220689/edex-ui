@@ -3,7 +3,7 @@ const {app, BrowserWindow, dialog, shell} = require("electron");
 const fs = require("fs");
 const path = require("path");
 
-const debugLogFile = "C:\\Users\\Avinash\\.gemini\antigravity\\scratch\\edex_debug.log";
+const debugLogFile = "C:\\Users\\Avinash\\.gemini\\antigravity\\scratch\\edex_debug.log";
 function debugLog(msg) {
     try {
         fs.appendFileSync(debugLogFile, `[${new Date().toISOString()}] ${msg}\n`);
