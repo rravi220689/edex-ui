@@ -78,6 +78,9 @@ stepLog("2 - after requires, before polyfill");
 // Polyfill remote on electron and window for legacy calls
 electron.remote = remote;
 window.remote = remote;
+if (!remote.process) {
+    remote.process = process;
+}
 
 const settingsDir = remote.app.getPath("userData");
 const themesDir = path.join(settingsDir, "themes");
@@ -97,12 +100,13 @@ window.lastWindowState = require(lastWindowStateFile);
 stepLog("4 - configs loaded successfully");
 
 // Load CLI parameters
-if (remote.process.argv.includes("--nointro")) {
+const argv = (remote.process && remote.process.argv) || process.argv || [];
+if (argv.includes("--nointro")) {
     window.settings.nointroOverride = true;
 } else {
     window.settings.nointroOverride = false;
 }
-if (remote.process.argv.includes("--nocursor")) {
+if (argv.includes("--nocursor")) {
     window.settings.nocursorOverride = true;
 } else {
     window.settings.nocursorOverride = false;
