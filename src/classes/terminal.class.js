@@ -10,7 +10,7 @@ class Terminal {
             const {WebglAddon} = require("xterm-addon-webgl");
             this.Ipc = require("electron").ipcRenderer;
 
-            this.port = opts.port || 3000;
+            this.port = opts.port || 3450;
             this.cwd = "";
             this.oncwdchange = () => {};
 
@@ -179,45 +179,57 @@ class Terminal {
 
             let sockHost = opts.host || "127.0.0.1";
             let sockPort = this.port;
+            let reconnectTries = 0;
+            let attachAddon = null;
 
-            this.socket = new WebSocket("ws://"+sockHost+":"+sockPort);
-            this.socket.onopen = () => {
-                let attachAddon = new AttachAddon(this.socket);
-                this.term.loadAddon(attachAddon);
-                this.fit();
-            };
-            this.socket.onerror = e => {
-                console.warn("Terminal socket error:", e);
-            };
-            this.socket.onclose = e => {
-                if (this.onclose) {
-                    this.onclose(e);
-                }
+            const connectSocket = () => {
+                this.socket = new WebSocket("ws://"+sockHost+":"+sockPort);
+                this.socket.onopen = () => {
+                    reconnectTries = 0;
+                    if (!attachAddon) {
+                        attachAddon = new AttachAddon(this.socket);
+                        this.term.loadAddon(attachAddon);
+                    }
+                    this.fit();
+                };
+                this.socket.onerror = e => {
+                    console.warn("Terminal socket error:", e);
+                };
+                this.socket.onclose = e => {
+                    if (reconnectTries < 6) {
+                        reconnectTries++;
+                        setTimeout(connectSocket, 600);
+                    } else if (this.onclose) {
+                        this.onclose(e);
+                    }
+                };
+
+                this.socket.addEventListener("message", e => {
+                    let d = Date.now();
+
+                    if (d - this.lastSoundFX > 30) {
+                        if(window.passwordMode == "false")
+                            window.audioManager.stdout.play();
+                        this.lastSoundFX = d;
+                    }
+                    if (d - this.lastRefit > 10000) {
+                        this.fit();
+                    }
+
+                    // See #397
+                    if (!window.settings.experimentalGlobeFeatures) return;
+                    let ips = e.data.match(/((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)/g);
+                    if (ips !== null && ips.length >= 1) {
+                        ips = ips.filter((val, index, self) => { return self.indexOf(val) === index; });
+                        ips.forEach(ip => {
+                            window.mods.globe.addTemporaryConnectedMarker(ip);
+                        });
+                    }
+                });
             };
 
             this.lastSoundFX = Date.now();
-            this.socket.addEventListener("message", e => {
-                let d = Date.now();
-
-                if (d - this.lastSoundFX > 30) {
-                    if(window.passwordMode == "false")
-                        window.audioManager.stdout.play();
-                    this.lastSoundFX = d;
-                }
-                if (d - this.lastRefit > 10000) {
-                    this.fit();
-                }
-
-                // See #397
-                if (!window.settings.experimentalGlobeFeatures) return;
-                let ips = e.data.match(/((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)/g);
-                if (ips !== null && ips.length >= 1) {
-                    ips = ips.filter((val, index, self) => { return self.indexOf(val) === index; });
-                    ips.forEach(ip => {
-                        window.mods.globe.addTemporaryConnectedMarker(ip);
-                    });
-                }
-            });
+            connectSocket();
 
             let parent = document.getElementById(opts.parentId);
             parent.addEventListener("wheel", e => {
@@ -315,7 +327,7 @@ class Terminal {
             this.Ipc = require("electron").ipcMain;
 
             this.renderer = null;
-            this.port = opts.port || 3000;
+            this.port = opts.port || 3450;
 
             this._closed = false;
             this.onclosed = () => {};
@@ -432,11 +444,11 @@ class Terminal {
                 port: this.port,
                 clientTracking: true,
                 verifyClient: info => {
-                    if (this.wss.clients.length >= 1) {
-                        return false;
+                    let clientCount = 0;
+                    if (this.wss && this.wss.clients) {
+                        clientCount = (typeof this.wss.clients.size === "number") ? this.wss.clients.size : (this.wss.clients.length || 0);
                     }
-                    const origin = info.origin || (info.req && info.req.headers && info.req.headers.origin);
-                    if (origin && origin !== "null" && !origin.startsWith("file://") && !origin.startsWith("vscode-file://")) {
+                    if (clientCount >= 1) {
                         return false;
                     }
                     return true;

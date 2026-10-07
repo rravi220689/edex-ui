@@ -582,7 +582,7 @@ async function initUI() {
         0: new Terminal({
             role: "client",
             parentId: "terminal0",
-            port: window.settings.port || 3000
+            port: window.settings.port || 3450
         })
     };
     window.currentTerm = 0;

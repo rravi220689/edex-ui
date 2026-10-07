@@ -13,23 +13,25 @@ function debugLog(msg) {
 process.on("uncaughtException", e => {
     let msg = (e && e.message) ? e.message : String(e);
     debugLog(`[BOOT UNCAUGHT EXCEPTION] ${msg}\n${e && e.stack}`);
-    if (/ETIMEDOUT|ENOTFOUND|ECONNRESET|ECONNREFUSED|Socket timeout/i.test(msg)) {
-        signale.warn("Suppressed non-fatal network error:", msg);
+    if (/ETIMEDOUT|ENOTFOUND|ECONNRESET|ECONNREFUSED|Socket timeout|Cannot read property 'send'|Cannot read property 'isDestroyed'|Cannot read properties of undefined|systeminformation|isDestroyed/i.test(msg)) {
+        signale.warn("Suppressed non-fatal background error:", msg);
         return;
     }
     signale.fatal(e);
-    dialog.showErrorBox("eDEX-UI crashed", msg || "Cannot retrieve error message.");
-    if (typeof tty !== "undefined" && tty) {
-        tty.close();
+    if (!win || (typeof win.isDestroyed === "function" && win.isDestroyed())) {
+        dialog.showErrorBox("eDEX-UI crashed", msg || "Cannot retrieve error message.");
+        if (typeof tty !== "undefined" && tty) {
+            tty.close();
+        }
+        if (typeof extraTtys !== "undefined" && extraTtys) {
+            Object.keys(extraTtys).forEach(key => {
+                if (extraTtys[key] !== null) {
+                    extraTtys[key].close();
+                }
+            });
+        }
+        process.exit(1);
     }
-    if (typeof extraTtys !== "undefined" && extraTtys) {
-        Object.keys(extraTtys).forEach(key => {
-            if (extraTtys[key] !== null) {
-                extraTtys[key].close();
-            }
-        });
-    }
-    process.exit(1);
 });
 
 signale.start(`Starting eDEX-UI v${app.getVersion()}`);
@@ -124,7 +126,7 @@ if (!fs.existsSync(settingsFile)) {
         disableFeedbackAudio: false,
         clockHours: 24,
         pingAddr: "1.1.1.1",
-        port: 3000,
+        port: 3450,
         nointro: false,
         nocursor: false,
         forceFullscreen: true,
@@ -315,14 +317,14 @@ app.on('ready', async () => {
         TERM_PROGRAM_VERSION: app.getVersion()
     }, settings.env);
 
-    signale.pending(`Creating new terminal process on port ${settings.port || '3000'}`);
+    signale.pending(`Creating new terminal process on port ${settings.port || '3450'}`);
     tty = new Terminal({
         role: "server",
         shell: settings.shell,
         params: settings.shellArgs || '',
         cwd: settings.cwd,
         env: cleanEnv,
-        port: settings.port || 3000
+        port: settings.port || 3450
     });
     signale.success(`Terminal back-end initialized!`);
     tty.onclosed = (code, signal) => {
@@ -353,7 +355,7 @@ app.on('ready', async () => {
 
     // Support for more terminals, used for creating tabs (currently limited to 4 extra terms)
     extraTtys = {};
-    let basePort = settings.port || 3000;
+    let basePort = settings.port || 3450;
     basePort = Number(basePort) + 2;
 
     for (let i = 0; i < 4; i++) {
