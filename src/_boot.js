@@ -2,12 +2,17 @@ const signale = require("signale");
 const {app, BrowserWindow, dialog, shell} = require("electron");
 
 process.on("uncaughtException", e => {
+    let msg = (e && e.message) ? e.message : String(e);
+    if (/ETIMEDOUT|ENOTFOUND|ECONNRESET|ECONNREFUSED|Socket timeout/i.test(msg)) {
+        signale.warn("Suppressed non-fatal network error:", msg);
+        return;
+    }
     signale.fatal(e);
-    dialog.showErrorBox("eDEX-UI crashed", e.message || "Cannot retrieve error message.");
-    if (tty) {
+    dialog.showErrorBox("eDEX-UI crashed", msg || "Cannot retrieve error message.");
+    if (typeof tty !== "undefined" && tty) {
         tty.close();
     }
-    if (extraTtys) {
+    if (typeof extraTtys !== "undefined" && extraTtys) {
         Object.keys(extraTtys).forEach(key => {
             if (extraTtys[key] !== null) {
                 extraTtys[key].close();

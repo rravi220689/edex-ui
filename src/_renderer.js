@@ -146,9 +146,15 @@ window._loadTheme = theme => {
 function initGraphicalErrorHandling() {
     window.edexErrorsModals = [];
     window.onerror = (msg, path, line, col, error) => {
+        let errStr = `${msg} ${error}`;
+        if (/ETIMEDOUT|ENOTFOUND|ECONNRESET|ECONNREFUSED|Socket timeout|myexternalip/i.test(errStr)) {
+            console.warn("Non-fatal network error suppressed:", msg, error);
+            return true;
+        }
+
         let errorModal = new Modal({
             type: "error",
-            title: error,
+            title: error || "Runtime Error",
             message: `${msg}<br/>        at ${path}  ${line}:${col}`
         });
         window.edexErrorsModals.push(errorModal);
@@ -156,6 +162,23 @@ function initGraphicalErrorHandling() {
         ipc.send("log", "error", `${error}: ${msg}`);
         ipc.send("log", "debug", `at ${path} ${line}:${col}`);
     };
+
+    window.addEventListener("unhandledrejection", e => {
+        let reason = e.reason ? (e.reason.message || e.reason) : "";
+        if (/ETIMEDOUT|ENOTFOUND|ECONNRESET|ECONNREFUSED|Socket timeout/i.test(reason)) {
+            e.preventDefault();
+            console.warn("Suppressed unhandled network rejection:", reason);
+        }
+    });
+
+    process.on("uncaughtException", err => {
+        let msg = (err && err.message) ? err.message : String(err);
+        if (/ETIMEDOUT|ENOTFOUND|ECONNRESET|ECONNREFUSED|Socket timeout/i.test(msg)) {
+            console.warn("Suppressed process network error:", msg);
+            return;
+        }
+        ipc.send("log", "error", `Uncaught: ${msg}`);
+    });
 }
 
 function waitForFonts() {
