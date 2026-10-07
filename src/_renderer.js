@@ -276,24 +276,30 @@ function initSystemInformationProxy() {
 }
 
 // Init audio
+stepLog("9 - before AudioManager");
 window.audioManager = new AudioManager();
+stepLog("10 - after AudioManager");
 
 // See #223
 remote.app.focus();
 
 let i = 0;
+stepLog("11 - nointro: " + window.settings.nointro + ", nointroOverride: " + window.settings.nointroOverride);
 if (window.settings.nointro || window.settings.nointroOverride) {
+    stepLog("12A - entering fast boot without intro");
     initGraphicalErrorHandling();
     initSystemInformationProxy();
     document.getElementById("boot_screen").remove();
     document.body.setAttribute("class", "");
     waitForFonts().then(initUI);
 } else {
+    stepLog("12B - calling displayLine");
     displayLine();
 }
 
 // Startup boot log
 function displayLine() {
+    stepLog("13 - displayLine executing, i=" + i);
     let bootScreen = document.getElementById("boot_screen");
     let log = fs.readFileSync(path.join(__dirname, "assets", "misc", "boot_log.txt")).toString().split('\n');
 
@@ -417,6 +423,7 @@ async function getDisplayName() {
 
 // Create the UI's html structure and initialize the terminal client and the keyboard
 async function initUI() {
+    stepLog("14 - initUI started");
     document.body.innerHTML += `<section class="mod_column" id="mod_column_left">
         <h3 class="title"><p>PANEL</p><p>SYSTEM</p></h3>
     </section>
