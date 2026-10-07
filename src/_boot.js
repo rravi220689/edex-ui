@@ -81,8 +81,16 @@ try {
     }
     if (shouldDisableGPU) {
         app.disableHardwareAcceleration();
+        app.commandLine.appendSwitch("disable-gpu");
+        app.commandLine.appendSwitch("disable-software-rasterizer");
+        app.commandLine.appendSwitch("disable-gpu-compositing");
+        app.commandLine.appendSwitch("disable-gpu-rasterization");
+        app.commandLine.appendSwitch("disable-gpu-process-crash-limit");
+        signale.info("Hardware acceleration disabled (safe software rendering active)");
     }
-} catch(e) {}
+} catch(e) {
+    signale.warn("Error setting GPU flags:", e);
+}
 
 // Fix userData folder not setup on Windows
 try {
